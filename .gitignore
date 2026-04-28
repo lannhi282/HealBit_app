@@ -1,0 +1,9 @@
+﻿fastapi_backend/.venv/
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.zip
+.env
