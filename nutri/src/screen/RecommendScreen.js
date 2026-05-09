@@ -10,10 +10,8 @@ import {
   FlatList,
 } from "react-native";
 import { responsiveFontSize as rf } from "react-native-responsive-dimensions";
-import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import { useRoute } from "@react-navigation/native";
 import { fetchAISuggestion } from "../api/AISuggest";
 import ChatbotFAB from "../components/ChatbotFAB";
 import { getUserProfile } from "../lib/supabaseUtils";
@@ -30,17 +28,15 @@ import { getUserProfile } from "../lib/supabaseUtils";
  * - Interactive list items with detailed views
  * - Loading states and error handling
  */
-export default function RecommendScreen() {
-  const navigation = useNavigation();
-  const route = useRoute();
-
-  // State management for UI and data
-  const [selectedTab, setSelectedTab] = useState("recipes"); // Current active tab
+export default function RecommendScreen({ navigation, route }) {
+  const [selectedTab, setSelectedTab] = useState(
+    route?.params?.defaultTab || "recipes",
+  );
   const [recipes, setRecipes] = useState([]); // List of recommended recipes
   const [exercises, setExercises] = useState([]); // List of recommended exercises
   const [loading, setLoading] = useState(true); // Loading state indicator
+  const [error, setError] = useState("");
   const [userProfile, setUserProfile] = useState(null); // User profile data
-
   /**
    * Fetches user profile and AI-generated recommendations
    * Combines user health data with AI suggestions for personalized content
@@ -48,19 +44,35 @@ export default function RecommendScreen() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setError("");
+
       const profile = await getUserProfile();
+
       if (!profile) {
-        console.error("No user profile found");
-        setLoading(false);
+        setRecipes([]);
+        setExercises([]);
+        setError("Không tìm thấy hồ sơ người dùng. Vui lòng cập nhật hồ sơ.");
         return;
       }
-      // Get AI suggestions based on user's health metrics
+
+      setUserProfile(profile);
+
       const aiSuggestion = await fetchAISuggestion(profile);
 
-      setRecipes(aiSuggestion.recipes || []);
-      setExercises(aiSuggestion.exercises || []);
+      const newRecipes = aiSuggestion.recipes || [];
+      const newExercises = aiSuggestion.exercises || [];
+
+      setRecipes(newRecipes);
+      setExercises(newExercises);
+
+      if (newRecipes.length === 0 && newExercises.length === 0) {
+        setError("");
+      }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.log("Error fetching data:", error);
+      setRecipes([]);
+      setExercises([]);
+      setError("Không thể tải gợi ý, vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -68,8 +80,10 @@ export default function RecommendScreen() {
 
   // Fetch data on component mount
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (route?.params?.defaultTab) {
+      setSelectedTab(route.params.defaultTab);
+    }
+  }, [route?.params?.defaultTab]);
 
   /**
    * Regenerates recommendations by refetching data
@@ -78,12 +92,56 @@ export default function RecommendScreen() {
   const handleRegenerate = () => {
     fetchData();
   };
-
+  const currentData = selectedTab === "recipes" ? recipes : exercises;
+  const isEmpty = currentData.length === 0;
   /**
    * Renders individual recipe item in the list
    * @param {Object} item - Recipe data object
    * @param {number} index - Item index in the list
    */
+
+  const getRecipeIcon = (iconClass) => {
+    const validIcons = [
+      "utensils",
+      "drumstick-bite",
+      "carrot",
+      "apple-alt",
+      "fish",
+      "leaf",
+      "mug-hot",
+      "seedling",
+      "egg",
+      "bread-slice",
+    ];
+
+    if (validIcons.includes(iconClass)) {
+      return iconClass;
+    }
+
+    return "utensils";
+  };
+
+  const getExerciseIcon = (iconClass) => {
+    const validIcons = [
+      "walking",
+      "running",
+      "heartbeat",
+      "dumbbell",
+      "biking",
+      "swimmer",
+      "pray",
+      "music",
+      "hiking",
+      "spa",
+      "child",
+    ];
+
+    if (validIcons.includes(iconClass)) {
+      return iconClass;
+    }
+
+    return "heartbeat";
+  };
   const renderRecipeItem = ({ item, index }) => (
     <TouchableOpacity
       style={styles.listItem}
@@ -91,7 +149,11 @@ export default function RecommendScreen() {
     >
       <View style={styles.itemContent}>
         <View style={styles.iconContainer}>
-          <FontAwesome5 name={item.iconClass} size={24} color="#29c439" />
+          <FontAwesome5
+            name={getRecipeIcon(item.iconClass)}
+            size={24}
+            color="#29c439"
+          />
         </View>
         <View style={styles.textContainer}>
           <Text style={styles.itemTitle}>{item.recipeName}</Text>
@@ -116,7 +178,11 @@ export default function RecommendScreen() {
     >
       <View style={styles.itemContent}>
         <View style={styles.iconContainer}>
-          <FontAwesome5 name={item.iconClass} size={24} color="#29c439" />
+          <FontAwesome5
+            name={getExerciseIcon(item.iconClass)}
+            size={24}
+            color="#29c439"
+          />
         </View>
         <View style={styles.textContainer}>
           <Text style={styles.itemTitle}>{item.exerciseName}</Text>
@@ -136,12 +202,15 @@ export default function RecommendScreen() {
         <StatusBar translucent backgroundColor="transparent" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#29c439" />
-          <Text style={styles.loadingText}>Loading recommendations...</Text>
+          <Text style={styles.loadingText}>Đang tạo gợi ý cho bạn...</Text>
+          <Text style={styles.loadingSubText}>
+            AI đang phân tích BMI, mục tiêu và sở thích của bạn.
+          </Text>
         </View>
+        <ChatbotFAB />
       </View>
     );
   }
-
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
@@ -215,18 +284,56 @@ export default function RecommendScreen() {
 
       {/* Content Section - Dynamic List Based on Selected Tab */}
       <View style={styles.contentContainer}>
-        {selectedTab === "recipes" ? (
-          <FlatList
-            data={recipes}
-            renderItem={renderRecipeItem}
-            keyExtractor={(item, index) => index.toString()}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-          />
+        {error ? (
+          <View style={styles.stateContainer}>
+            <Ionicons name="alert-circle-outline" size={50} color="#ff8c00" />
+            <Text style={styles.stateTitle}>{error}</Text>
+            <Text style={styles.stateSubtitle}>
+              Kiểm tra kết nối mạng, backend AI hoặc thử tạo lại gợi ý.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={handleRegenerate}
+            >
+              <Ionicons name="refresh" size={18} color="white" />
+              <Text style={styles.retryButtonText}>Thử lại</Text>
+            </TouchableOpacity>
+          </View>
+        ) : isEmpty ? (
+          <View style={styles.stateContainer}>
+            <Ionicons
+              name={
+                selectedTab === "recipes"
+                  ? "restaurant-outline"
+                  : "fitness-outline"
+              }
+              size={50}
+              color="#999"
+            />
+            <Text style={styles.stateTitle}>
+              {selectedTab === "recipes"
+                ? "Chưa có dữ liệu món ăn"
+                : "Chưa có dữ liệu bài tập"}
+            </Text>
+            <Text style={styles.stateSubtitle}>
+              Hãy cập nhật hồ sơ sức khỏe hoặc tạo lại gợi ý.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={handleRegenerate}
+            >
+              <Ionicons name="sparkles-outline" size={18} color="white" />
+              <Text style={styles.retryButtonText}>Tạo gợi ý</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <FlatList
-            data={exercises}
-            renderItem={renderExerciseItem}
+            data={currentData}
+            renderItem={
+              selectedTab === "recipes" ? renderRecipeItem : renderExerciseItem
+            }
             keyExtractor={(item, index) => index.toString()}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
@@ -366,5 +473,59 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  loadingSubText: {
+    marginTop: 8,
+    fontSize: rf(1.6),
+    color: "#777",
+    textAlign: "center",
+    paddingHorizontal: 30,
+  },
+
+  stateContainer: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  stateTitle: {
+    marginTop: 12,
+    fontSize: rf(2),
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+  },
+
+  stateSubtitle: {
+    marginTop: 8,
+    fontSize: rf(1.6),
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+
+  retryButton: {
+    marginTop: 18,
+    backgroundColor: "#29c439",
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  retryButtonText: {
+    color: "white",
+    fontSize: rf(1.7),
+    fontWeight: "bold",
+    marginLeft: 8,
   },
 });

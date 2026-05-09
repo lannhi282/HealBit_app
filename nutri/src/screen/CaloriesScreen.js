@@ -17,14 +17,17 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { responsiveFontSize as rf } from "react-native-responsive-dimensions";
-import { getMealsForDate, addMeal } from "../lib/supabaseUtils";
+import { getMealsForDate, addMeal, getUserProfile } from "../lib/supabaseUtils";
 import { supabase } from "../lib/supabase";
 import { estimateCalories } from "../api/EstimateCalories"; // Import your API service
 import { LineChart } from "react-native-chart-kit";
+import {
+  calculateDailyCalorieGoal,
+  getRemainingCalories,
+} from "../utils/calorieCalculator";
 
 // Constants for the app
 const TOTAL_CALORIES = 2500;
-
 // Meal type options with their respective configurations
 const MEAL_OPTIONS = [
   {
@@ -53,7 +56,9 @@ export default function CaloriesScreen({ navigation }) {
   today.setHours(0, 0, 0, 0);
 
   // State management for the component
-  const [consumedCalories, setConsumedCalories] = useState(1721);
+  const [consumedCalories, setConsumedCalories] = useState(0);
+  const [dailyCalorieGoal, setDailyCalorieGoal] = useState(TOTAL_CALORIES);
+  const [remainingCalories, setRemainingCalories] = useState(TOTAL_CALORIES);
   const [selectedDate, setSelectedDate] = useState(today);
   const [recentMeals, setRecentMeals] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,12 +72,18 @@ export default function CaloriesScreen({ navigation }) {
 
   useEffect(() => {
     getCurrentUser();
+    loadDailyCalorieGoal();
   }, []);
 
   useEffect(() => {
     fetchMealsForDate(selectedDate);
   }, [selectedDate]);
 
+  useEffect(() => {
+    setRemainingCalories(
+      getRemainingCalories(dailyCalorieGoal, consumedCalories),
+    );
+  }, [dailyCalorieGoal, consumedCalories]);
   const getCurrentUser = async () => {
     try {
       const {
@@ -90,7 +101,29 @@ export default function CaloriesScreen({ navigation }) {
       Alert.alert("Error", "Failed to get user information. Please try again.");
     }
   };
+  const loadDailyCalorieGoal = async () => {
+    try {
+      const profile = await getUserProfile();
 
+      const goal = calculateDailyCalorieGoal(profile);
+
+      if (goal) {
+        setDailyCalorieGoal(goal);
+        setRemainingCalories(getRemainingCalories(goal, consumedCalories));
+      } else {
+        setDailyCalorieGoal(TOTAL_CALORIES);
+        setRemainingCalories(
+          getRemainingCalories(TOTAL_CALORIES, consumedCalories),
+        );
+      }
+    } catch (error) {
+      console.error("Error calculating daily calorie goal:", error);
+      setDailyCalorieGoal(TOTAL_CALORIES);
+      setRemainingCalories(
+        getRemainingCalories(TOTAL_CALORIES, consumedCalories),
+      );
+    }
+  };
   // Function to analyze food image and save meal data
   const analyzeAndSaveImage = async (imageUri, mealType) => {
     setIsAnalyzing(true);
@@ -400,7 +433,7 @@ export default function CaloriesScreen({ navigation }) {
         dateLabels.push(date.toLocaleDateString("en-US", { weekday: "short" }));
         // Color points red if over daily limit, green if under
         pointColors.push(
-          totalCalories > TOTAL_CALORIES
+          totalCalories > dailyCalorieGoal
             ? "rgba(255, 0, 0, 1)"
             : "rgba(41, 196, 57, 1)",
         );
@@ -414,6 +447,11 @@ export default function CaloriesScreen({ navigation }) {
             color: (opacity = 1) => `rgba(41, 196, 57, ${opacity})`,
             strokeWidth: 2,
             pointColors: pointColors,
+          },
+          {
+            data: weekDates.map(() => dailyCalorieGoal),
+            color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
+            strokeWidth: 2,
           },
         ],
         weeklyTotal: weeklyTotal,
@@ -497,6 +535,13 @@ export default function CaloriesScreen({ navigation }) {
       </View>
 
       <View style={styles.caloriesSection}>
+        <TouchableOpacity
+          style={styles.progressButton}
+          onPress={() => navigation.getParent()?.navigate("ProgressHistory")}
+        >
+          <Ionicons name="trending-up" size={22} color="#29c439" />
+          <Text style={styles.progressButtonText}>Health Progress</Text>
+        </TouchableOpacity>
         <View style={styles.calorieDisplay}>
           <View style={styles.headerRow}>
             <View style={styles.calorieIconContainer}>
@@ -506,7 +551,25 @@ export default function CaloriesScreen({ navigation }) {
           </View>
           <View style={styles.calorieInfo}>
             <Text style={styles.calorieCount}>{consumedCalories} Kcal</Text>
-            <Text style={styles.calorieTotal}>of {TOTAL_CALORIES} kcal</Text>
+
+            <Text style={styles.calorieTotal}>of {dailyCalorieGoal} kcal</Text>
+
+            <Text style={styles.remainingCaloriesText}>
+              Còn lại: {remainingCalories} kcal
+            </Text>
+
+            <View style={styles.progressBarBackground}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: dailyCalorieGoal
+                      ? `${Math.min((consumedCalories / dailyCalorieGoal) * 100, 100)}%`
+                      : "0%",
+                  },
+                ]}
+              />
+            </View>
           </View>
         </View>
       </View>
@@ -611,20 +674,38 @@ export default function CaloriesScreen({ navigation }) {
                   fromZero={true}
                   segments={5}
                   renderDotContent={({ x, y, index, indexData }) => {
+                    if (!indexData || indexData === 0) {
+                      return null;
+                    }
+
+                    if (indexData === dailyCalorieGoal) {
+                      return null;
+                    }
+
                     return (
                       <View
-                        key={index}
+                        key={`actual-calorie-label-${index}-${indexData}-${Math.round(x)}-${Math.round(y)}`}
                         style={{
                           position: "absolute",
-                          top: y - 250,
-                          left: x - 10,
+                          top: y - 34,
+                          left: x - 26,
                           backgroundColor:
-                            weeklyCaloriesData.datasets[0].pointColors[index],
-                          padding: 4,
-                          borderRadius: 4,
+                            weeklyCaloriesData.datasets[0].pointColors?.[
+                              index
+                            ] || "rgba(41, 196, 57, 1)",
+                          paddingHorizontal: 7,
+                          paddingVertical: 3,
+                          borderRadius: 6,
+                          zIndex: 10,
                         }}
                       >
-                        <Text style={{ color: "white", fontSize: 10 }}>
+                        <Text
+                          style={{
+                            color: "white",
+                            fontSize: 10,
+                            fontWeight: "600",
+                          }}
+                        >
                           {indexData} cal
                         </Text>
                       </View>
@@ -639,7 +720,8 @@ export default function CaloriesScreen({ navigation }) {
               </View>
             )}
             <Text style={styles.chartLegend}>
-              Daily Calorie Intake for the Week
+              Daily goal: {dailyCalorieGoal} kcal • Green = under goal • Red =
+              over goal
             </Text>
             <View style={styles.weeklyTotalContainer}>
               <Text style={styles.weeklyTotalLabel}>Weekly Total:</Text>
@@ -961,5 +1043,48 @@ const styles = StyleSheet.create({
     fontSize: rf(2),
     fontWeight: "bold",
     color: "#29c439",
+  },
+  remainingCaloriesText: {
+    fontSize: rf(1.7),
+    color: "#666",
+    marginTop: 6,
+    marginBottom: 12,
+  },
+
+  progressBarBackground: {
+    width: "100%",
+    height: 10,
+    backgroundColor: "#e6e6e6",
+    borderRadius: 10,
+    overflow: "hidden",
+    marginTop: 8,
+  },
+
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#29c439",
+    borderRadius: 10,
+  },
+  progressButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  progressButtonText: {
+    marginLeft: 8,
+    fontSize: rf(1.8),
+    fontWeight: "600",
+    color: "#333",
   },
 });

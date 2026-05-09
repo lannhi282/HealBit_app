@@ -133,13 +133,23 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => navigation.navigate("Calories")}
+            >
               <View style={[styles.actionIcon, { backgroundColor: "#FFE4E1" }]}>
                 <Ionicons name="nutrition-outline" size={24} color="#FF6B6B" />
               </View>
               <Text style={styles.actionText}>Today's Meal</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() =>
+                navigation.navigate("Recommend", {
+                  defaultTab: "exercises",
+                })
+              }
+            >
               <View style={[styles.actionIcon, { backgroundColor: "#E0F7FA" }]}>
                 <Ionicons name="fitness-outline" size={24} color="#00BCD4" />
               </View>

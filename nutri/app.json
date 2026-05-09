@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "nutri",
-    "slug": "nutri",
+    "name": "",
+    "slug": "",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo_healbit.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -17,10 +17,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/logo_healbit.png",
         "backgroundColor": "#edffdd"
       },
-      "package": "com.anonymous.nutri"
+      "package": "com.anonymous.healbit"
     },
     "web": {
       "favicon": "./assets/favicon.png"

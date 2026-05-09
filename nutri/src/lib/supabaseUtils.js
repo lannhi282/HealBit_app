@@ -32,17 +32,6 @@ export const updateUserProfile = async (updates) => {
  * Functions for managing user's progress tracking data
  */
 
-// Fetch user's progress history, sorted by date
-export const getProgressHistory = async () => {
-  const { data, error } = await supabase
-    .from("progress_tracking")
-    .select("*")
-    .order("date", { ascending: false });
-
-  if (error) throw error;
-  return data;
-};
-
 // Add a new progress entry for the current user
 export const addProgressEntry = async (entry) => {
   const {
@@ -282,4 +271,24 @@ export const addMeal = async (mealData) => {
     console.error("Error adding meal:", error);
     throw error;
   }
+};
+
+export const getProgressHistory = async () => {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) throw userError;
+  if (!user) throw new Error("No user found");
+
+  const { data, error } = await supabase
+    .from("progress_tracking")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("date", { ascending: true });
+
+  if (error) throw error;
+
+  return data || [];
 };

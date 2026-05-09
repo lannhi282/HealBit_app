@@ -1,3 +1,4 @@
+import { API_CONFIG } from "../config/apiConfig";
 /**
  * Fetches personalized nutrition and exercise recommendations from Gemini AI
  * @param {number} bmi - User's Body Mass Index
@@ -6,7 +7,7 @@
  */
 export const fetchAISuggestion = async (profile) => {
   try {
-    const response = await fetch("http://192.168.1.2:3000/generate-ai-tips", {
+    const response = await fetch(`${API_CONFIG.AI_BASE_URL}/generate-ai-tips`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -45,11 +46,7 @@ export const fetchAISuggestion = async (profile) => {
       exercises: data?.exercises || [],
     };
   } catch (error) {
-    console.error("Error fetching recipes:", error);
-
-    return {
-      recipes: [],
-      exercises: [],
-    };
+    console.log("Error fetching recipes:", error);
+    throw error;
   }
 };

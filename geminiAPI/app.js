@@ -180,7 +180,7 @@ app.post("/generate-ai-tips", async (req, res) => {
       });
     }
     const prompt = `
-Generate 5 healthy recipes and 5 suitable exercises in JSON format for this user profile:
+Generate 4 healthy recipes and 4 suitable exercises in JSON format for this user profile:
 
 User Profile:
 - BMI: ${bmi}
@@ -205,6 +205,18 @@ Personalization rules:
 - Consider water intake and main meals when suggesting habits.
 - Recipes should be healthy, practical, and easy to cook.
 - Exercises should be safe and suitable for the user's BMI and obesity risk level.
+
+Icon rules:
+- Only use iconClass from the allowed lists below.
+- Do not create new icon names.
+- Do not use full Font Awesome class names like "fa-solid fa-dumbbell".
+- Return only the icon name, for example: "dumbbell".
+
+Recipe iconClass allowed values:
+utensils, drumstick-bite, carrot, apple-alt, fish, leaf, mug-hot, seedling, egg, bread-slice
+
+Exercise iconClass allowed values:
+walking, running, heartbeat, dumbbell, biking, swimmer, pray, music, hiking, spa, child
 
 The response should follow this JSON schema:
 {
@@ -245,8 +257,10 @@ IMPORTANT:
 
     const rawText = await callOpenRouter([{ role: "user", content: prompt }], {
       model: "openai/gpt-4o-mini",
-      temperature: 0.5,
-      max_tokens: 2200,
+      // temperature: 0.5,
+      temperature: 0.4,
+      // max_tokens: 2200,
+      max_tokens: 4000,
     });
     console.log("AI tips raw response:", rawText);
 
@@ -378,6 +392,6 @@ app.post("/estimate-calories", async (req, res) => {
   }
 });
 
-app.listen(3000, "0.0.0.0", () => {
-  console.log("Server running...");
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Server running on port ${port}`);
 });

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+
 import {
   View,
   Text,
@@ -15,6 +16,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useRoute } from "@react-navigation/native";
 import axios from "axios";
 import { updateUserProfile, addProgressEntry } from "../lib/supabaseUtils";
+import { API_CONFIG } from "../config/apiConfig";
 
 export default function BMIResultScreen({ navigation }) {
   const route = useRoute();
@@ -99,10 +101,9 @@ export default function BMIResultScreen({ navigation }) {
       });
 
       const response = await axios.post(
-        "http://192.168.1.2:8000/predict_obesity_risk/",
+        `${API_CONFIG.MODEL_BASE_URL}/predict_obesity_risk/`,
         payload,
       );
-
       console.log("Response from backend:", response.data);
 
       const riskLevel = response.data.obesity_level;

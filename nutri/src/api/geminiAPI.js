@@ -1,6 +1,6 @@
+import { API_CONFIG } from "../config/apiConfig";
 // API endpoint for the nutrition-focused chatbot
-const API_URL = "http://192.168.1.2:3000/ai-chatbot";
-/**
+const API_URL = `${API_CONFIG.AI_BASE_URL}/ai-chatbot`; /**
  * Sends a message to the Gemini AI chatbot and gets a nutrition-focused response
  * @param {string} message - The user's question or message
  * @returns {Promise<string>} The AI's response about nutrition

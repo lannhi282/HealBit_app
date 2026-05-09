@@ -1,10 +1,10 @@
-import { View, Text, StyleSheet } from 'react-native';
-import React from 'react';
-import AppNavigation from './src/navigation/AppNavigation';
+import { View, Text, StyleSheet } from "react-native";
+import React from "react";
+import AppNavigation from "./src/navigation/AppNavigation";
 
 export default function App() {
   return (
-    <View style={styles.container}>  
+    <View style={styles.container}>
       <AppNavigation />
     </View>
   );
@@ -12,6 +12,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#edffdd',
-  }
+    backgroundColor: "#edffdd",
+  },
 });
