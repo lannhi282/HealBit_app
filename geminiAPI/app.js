@@ -7,13 +7,127 @@ const port = 3000;
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+// ============ CORS MIDDLEWARE ============
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept",
+  );
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+// ==========================================
+
+// ============ PARSE text/plain AS JSON ============
+app.use(express.text({ type: "text/plain", limit: "50mb" }));
+app.use((req, res, next) => {
+  if (req.is("text/plain") && typeof req.body === "string") {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (err) {
+      console.log("⚠️  Could not parse text/plain as JSON");
+    }
+  }
+  next();
+});
+// =============================================
+
+// ============ LOGGING MIDDLEWARE ============
+app.use((req, res, next) => {
+  console.log("\n═══════════════════════════════════════════════════");
+  console.log(
+    `📥 [${new Date().toLocaleTimeString()}] ${req.method} ${req.path}`,
+  );
+  console.log("Headers:", {
+    "Content-Type": req.get("content-type"),
+    "Content-Length": req.get("content-length"),
+  });
+
+  if (req.method === "POST" || req.method === "PUT") {
+    console.log(
+      "Request Body:",
+      JSON.stringify(req.body, null, 2).substring(0, 500),
+    );
+  }
+
+  const originalJson = res.json.bind(res);
+  res.json = function (data) {
+    console.log(
+      "Response Data:",
+      JSON.stringify(data, null, 2).substring(0, 500),
+    );
+    console.log("═══════════════════════════════════════════════════\n");
+    return originalJson(data);
+  };
+
+  next();
+});
+// ===============================================
+
 const API_KEY = process.env.API_KEY;
 
-console.log("OpenRouter key loaded =", !!API_KEY);
+console.log("🔑 OpenRouter key loaded =", !!API_KEY);
+
+// ============ ROOT ENDPOINT ============
+app.get("/", (req, res) => {
+  console.log("[GET /] Server health check");
+  res.json({
+    status: "Server is running!",
+    name: "Nutri Recommendation System - Gemini API",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+    endpoints: [
+      {
+        method: "GET",
+        path: "/",
+        description: "Server status & documentation",
+      },
+      {
+        method: "POST",
+        path: "/generate-ai-tips",
+        description: "Generate personalized recipes and exercises",
+        requiredFields: [
+          "bmi",
+          "obesityRisk",
+          "age",
+          "gender",
+          "weight",
+          "height",
+          "exerciseFrequency",
+          "waterIntake",
+          "mainMeals",
+          "foodPreference",
+          "allergy",
+          "goal",
+        ],
+      },
+      {
+        method: "POST",
+        path: "/ai-chatbot",
+        description: "Chat with nutrition assistant",
+        requiredFields: ["message"],
+      },
+      {
+        method: "POST",
+        path: "/estimate-calories",
+        description: "Analyze food image and estimate calories",
+        requiredFields: ["base64Image"],
+      },
+    ],
+    apiProvider: "OpenRouter (Google Gemini)",
+    logging: "All requests/responses are logged with timestamps",
+  });
+});
+// ===============================================
 
 async function callOpenRouter(messages, extra = {}) {
   // const { model = "google/gemini-2.0-flash-001", ...restExtra } = extra;
-  const { model = "openai/gpt-4o-mini", ...restExtra } = extra;
+  const { model = "google/gemini-2.0-flash-001", ...restExtra } = extra;
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",
     {
@@ -58,13 +172,7 @@ IMPORTANT INSTRUCTIONS:
 
 Example responses:
 User: "What's a healthy breakfast?"
-Assistant: "Try oatmeal with fruits and nuts. It's high in fiber and protein, keeping you full longer."
-
-User: "How to lose weight?"
-Assistant: "Focus on a balanced diet and regular exercise. Aim for a 500-calorie daily deficit through diet and activity."
-
-User: "What's the weather today?"
-Assistant: "I can only help with nutrition-related questions."`;
+Assistant: "Try oatmeal with fruits and nuts. It's high in fiber and protein, keeping you full longer."`;
 
 function cleanJsonResponse(text) {
   try {
@@ -160,20 +268,17 @@ app.post("/generate-ai-tips", async (req, res) => {
       goal,
     } = req.body;
 
-    console.log("Personalized recommendation input:", {
-      bmi,
-      obesityRisk,
-      age,
-      gender,
-      weight,
-      height,
-      exerciseFrequency,
-      waterIntake,
-      mainMeals,
-      foodPreference,
-      allergy,
-      goal,
-    });
+    console.log("🎯 [/generate-ai-tips] Personalized recommendation input:");
+    console.log("   - BMI:", bmi);
+    console.log("   - Obesity Risk:", obesityRisk);
+    console.log("   - Age:", age, "| Gender:", gender);
+    console.log("   - Weight:", weight, "kg | Height:", height, "cm");
+    console.log("   - Exercise Frequency:", exerciseFrequency);
+    console.log("   - Water Intake:", waterIntake);
+    console.log("   - Main Meals:", mainMeals);
+    console.log("   - Food Preference:", foodPreference);
+    console.log("   - Allergy:", allergy);
+    console.log("   - Goal:", goal);
     if (!bmi || !obesityRisk) {
       return res.status(400).json({
         error: "BMI value or Obesity Risk Level is required",
@@ -256,22 +361,32 @@ IMPORTANT:
 `;
 
     const rawText = await callOpenRouter([{ role: "user", content: prompt }], {
-      model: "openai/gpt-4o-mini",
+      model: "google/gemini-2.0-flash-001",
       // temperature: 0.5,
       temperature: 0.4,
       // max_tokens: 2200,
       max_tokens: 4000,
     });
-    console.log("AI tips raw response:", rawText);
+    console.log(
+      "[/generate-ai-tips] AI response received (length:",
+      rawText.length,
+      "chars)",
+    );
+    console.log("   Raw response preview:", rawText.substring(0, 200));
 
     const aiTipsJSON = cleanJsonResponse(rawText);
+    console.log("[/generate-ai-tips] JSON parsed successfully");
+    console.log("   - Recipes count:", aiTipsJSON.recipes?.length);
+    console.log("   - Exercises count:", aiTipsJSON.exercises?.length);
 
     res.json({
       bmi,
       data: aiTipsJSON,
     });
   } catch (error) {
-    console.error("Error generating AI tips:", error);
+    console.error("❌ [/generate-ai-tips] Error generating AI tips:");
+    console.error("   Error message:", error.message);
+    console.error("   Stack:", error.stack.split("\n")[0]);
     res.status(500).json({
       error: "Failed to generate recipes and exercises",
       details: error.message,
@@ -281,7 +396,15 @@ IMPORTANT:
 
 app.post("/ai-chatbot", async (req, res) => {
   try {
+    console.log("💬 [/ai-chatbot] Full req.body:", JSON.stringify(req.body));
+    console.log("💬 [/ai-chatbot] req.body type:", typeof req.body);
+    console.log(
+      "💬 [/ai-chatbot] Keys in req.body:",
+      Object.keys(req.body || {}),
+    );
+
     const { message } = req.body;
+    console.log("💬 [/ai-chatbot] User message:", message);
 
     if (!message) {
       return res.status(400).json({ error: "Message is required" });
@@ -297,13 +420,17 @@ app.post("/ai-chatbot", async (req, res) => {
         max_tokens: 120,
       },
     );
+    console.log("[/ai-chatbot] AI response received:", text.substring(0, 150));
 
     const conciseResponse =
       text.split(".")[0] + (text.includes(".") ? "." : "");
+    console.log("[/ai-chatbot] Final response sent:", conciseResponse);
 
     res.json({ response: conciseResponse });
   } catch (error) {
-    console.error("Error in OpenRouter chatbot:", error);
+    console.error("[/ai-chatbot] Error processing chatbot message:");
+    console.error("   Error message:", error.message);
+    console.error("   Stack:", error.stack.split("\n")[0]);
     res.status(500).json({
       error: "Failed to process message",
       details: error.message,
@@ -315,9 +442,11 @@ app.post("/estimate-calories", async (req, res) => {
   try {
     const { base64Image } = req.body;
 
-    console.log("Has base64Image =", !!base64Image);
-    console.log("base64Image type =", typeof base64Image);
-    console.log("base64Image preview =", base64Image?.slice?.(0, 50));
+    console.log("[/estimate-calories] Image data received:");
+    console.log("   - Has base64Image:", !!base64Image);
+    console.log("   - Data type:", typeof base64Image);
+    console.log("   - Data length:", base64Image?.length || 0, "bytes");
+    console.log("   - Preview (first 50 chars):", base64Image?.slice?.(0, 50));
 
     if (!base64Image) {
       return res.status(400).json({ error: "Image is required" });
@@ -327,7 +456,8 @@ app.post("/estimate-calories", async (req, res) => {
       ? base64Image
       : `data:image/jpeg;base64,${base64Image}`;
 
-    console.log("Image data length =", imageUrl?.length);
+    console.log("   - Image URL type:", imageUrl.substring(0, 30));
+    console.log("   - Final image data length:", imageUrl?.length, "bytes");
 
     const text = await callOpenRouter(
       [
@@ -363,13 +493,18 @@ app.post("/estimate-calories", async (req, res) => {
       ],
       {
         // model: "google/gemini-2.0-flash-001",
-        model: "openai/gpt-4o-mini",
+        model: "google/gemini-2.0-flash-001",
         temperature: 0.2,
-        max_tokens: 800,
+        max_tokens: 1000,
       },
     );
 
-    console.log("Estimate calories raw response:", text);
+    console.log(
+      "[/estimate-calories] AI analysis received (length:",
+      text.length,
+      "chars)",
+    );
+    console.log("   Response preview:", text.substring(0, 200));
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
@@ -377,13 +512,19 @@ app.post("/estimate-calories", async (req, res) => {
     }
 
     const parsedResponse = JSON.parse(jsonMatch[0]);
+    console.log("[/estimate-calories] JSON parsed successfully");
+    console.log("   - Dish name:", parsedResponse.dishName);
+    console.log("   - Food items count:", parsedResponse.foodItems?.length);
+    console.log("   - Total calories:", parsedResponse.totalCalories);
 
     res.json({
       success: true,
       data: parsedResponse,
     });
   } catch (error) {
-    console.error("Error in OpenRouter image analysis:", error);
+    console.error("[/estimate-calories] Error analyzing image:");
+    console.error("   Error message:", error.message);
+    console.error("   Stack:", error.stack.split("\n")[0]);
     res.status(500).json({
       success: false,
       error: "Failed to analyze image",
@@ -393,5 +534,11 @@ app.post("/estimate-calories", async (req, res) => {
 });
 
 app.listen(port, "0.0.0.0", () => {
-  console.log(`Server running on port ${port}`);
+  console.log("\n════════════════════════════════════════════════");
+  console.log(`   Server running on http://0.0.0.0:${port}`);
+  console.log("   Available endpoints:");
+  console.log("   - POST /generate-ai-tips");
+  console.log("   - POST /ai-chatbot");
+  console.log("   - POST /estimate-calories");
+  console.log("════════════════════════════════════════════════\n");
 });

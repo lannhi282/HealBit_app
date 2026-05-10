@@ -1,0 +1,105 @@
+### Test 1: GET server status
+GET http://localhost:3000/
+
+###
+
+### Test 2: POST /generate-ai-tips
+POST http://localhost:3000/generate-ai-tips
+Content-Type: application/json
+
+{
+  "bmi": 28,
+  "obesityRisk": "Overweight",
+  "age": 30,
+  "gender": "Male",
+  "weight": 80,
+  "height": 175,
+  "exerciseFrequency": "3x/week",
+  "waterIntake": "2L",
+  "mainMeals": 3,
+  "foodPreference": "Vegetarian",
+  "allergy": "None",
+  "goal": "lose_weight"
+}
+
+###
+
+### Test 3: POST /generate-ai-tips (Gain muscle)
+POST http://localhost:3000/generate-ai-tips
+Content-Type: application/json
+
+{
+  "bmi": 25,
+  "obesityRisk": "Normal",
+  "age": 25,
+  "gender": "Female",
+  "weight": 65,
+  "height": 165,
+  "exerciseFrequency": "5x/week",
+  "waterIntake": "3L",
+  "mainMeals": 4,
+  "foodPreference": "No preference",
+  "allergy": "Peanuts",
+  "goal": "gain_muscle"
+}
+
+###
+
+### Test 4: POST /generate-ai-tips (Maintain weight)
+POST http://localhost:3000/generate-ai-tips
+Content-Type: application/json
+
+{
+  "bmi": 22,
+  "obesityRisk": "Normal",
+  "age": 35,
+  "gender": "Male",
+  "weight": 75,
+  "height": 180,
+  "exerciseFrequency": "2x/week",
+  "waterIntake": "2.5L",
+  "mainMeals": 3,
+  "foodPreference": "Vegan",
+  "allergy": "Gluten",
+  "goal": "maintain_weight"
+}
+
+###
+
+### Test 5: POST /estimate-calories (Test với base64 image)
+POST http://localhost:3000/estimate-calories
+Content-Type: application/json
+
+{
+  "base64Image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8VAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k="
+}
+
+###
+
+### Test 6: POST /ai-chatbot (Đã fix)
+POST http://localhost:3000/ai-chatbot
+Content-Type: application/json
+
+{
+  "message": "What foods help reduce obesity?"
+}
+
+###
+
+### Test 7: POST /ai-chatbot (Câu hỏi khác)
+POST http://localhost:3000/ai-chatbot
+Content-Type: application/json
+
+{
+  "message": "How many calories in an apple?"
+}
+
+###
+
+### Test 8: POST /ai-chatbot (Câu hỏi ngoài topic)
+POST http://localhost:3000/ai-chatbot
+Content-Type: application/json
+
+{
+  "message": "Tell me about Python programming"
+}

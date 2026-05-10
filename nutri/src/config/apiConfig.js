@@ -1,4 +1,4 @@
 export const API_CONFIG = {
-  AI_BASE_URL: "http://192.168.1.70:3000",
-  MODEL_BASE_URL: "http://192.168.1.70:8000",
+  AI_BASE_URL: "http://172.16.0.239:3000",
+  MODEL_BASE_URL: "http://172.16.0.239:8000",
 };

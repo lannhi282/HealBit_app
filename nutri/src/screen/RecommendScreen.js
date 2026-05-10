@@ -36,6 +36,7 @@ export default function RecommendScreen({ navigation, route }) {
   const [exercises, setExercises] = useState([]); // List of recommended exercises
   const [loading, setLoading] = useState(true); // Loading state indicator
   const [error, setError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("Đang khởi tạo...");
   const [userProfile, setUserProfile] = useState(null); // User profile data
   /**
    * Fetches user profile and AI-generated recommendations
@@ -43,10 +44,14 @@ export default function RecommendScreen({ navigation, route }) {
    */
   const fetchData = async () => {
     try {
+      console.log("[RecommendScreen] Starting fetchData");
+      setStatusMessage("Đang tải hồ sơ người dùng...");
       setLoading(true);
       setError("");
 
       const profile = await getUserProfile();
+      console.log("[RecommendScreen] profile loaded:", profile);
+      setStatusMessage("Hồ sơ người dùng đã tải xong");
 
       if (!profile) {
         setRecipes([]);
@@ -56,11 +61,13 @@ export default function RecommendScreen({ navigation, route }) {
       }
 
       setUserProfile(profile);
+      setStatusMessage("Gửi yêu cầu tới AI...");
 
       const aiSuggestion = await fetchAISuggestion(profile);
 
       const newRecipes = aiSuggestion.recipes || [];
       const newExercises = aiSuggestion.exercises || [];
+      setStatusMessage("Đã nhận dữ liệu AI");
 
       setRecipes(newRecipes);
       setExercises(newExercises);
@@ -70,6 +77,7 @@ export default function RecommendScreen({ navigation, route }) {
       }
     } catch (error) {
       console.log("Error fetching data:", error);
+      setStatusMessage(`Lỗi: ${error.message}`);
       setRecipes([]);
       setExercises([]);
       setError("Không thể tải gợi ý, vui lòng thử lại.");
@@ -78,12 +86,16 @@ export default function RecommendScreen({ navigation, route }) {
     }
   };
 
-  // Fetch data on component mount
   useEffect(() => {
     if (route?.params?.defaultTab) {
       setSelectedTab(route.params.defaultTab);
     }
   }, [route?.params?.defaultTab]);
+
+  useEffect(() => {
+    console.log("[RecommendScreen] useEffect mount - calling fetchData");
+    fetchData();
+  }, []);
 
   /**
    * Regenerates recommendations by refetching data
@@ -206,6 +218,7 @@ export default function RecommendScreen({ navigation, route }) {
           <Text style={styles.loadingSubText}>
             AI đang phân tích BMI, mục tiêu và sở thích của bạn.
           </Text>
+          <Text style={styles.statusText}>{statusMessage}</Text>
         </View>
         <ChatbotFAB />
       </View>
@@ -480,6 +493,12 @@ const styles = StyleSheet.create({
     color: "#777",
     textAlign: "center",
     paddingHorizontal: 30,
+  },
+  statusText: {
+    marginTop: 12,
+    fontSize: rf(1.6),
+    color: "#29c439",
+    textAlign: "center",
   },
 
   stateContainer: {
