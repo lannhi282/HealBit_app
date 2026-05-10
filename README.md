@@ -7,14 +7,6 @@ NutriAI is an AI-powered mobile application that provides personalized health ri
 F:\Nutri-Recommendation-System\.venv\Scripts\Activate.ps1
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
 
-## 🎥 Demo Video
-
-🎥 Watch the demo video: [AI Drowning Detection System](https://www.youtube.com/shorts/u5Q9DUGZu08)
-
-![Demo GIF](./nutri/assets/gif.gif)
-
----
-
 ## 🧰 Prerequisites
 
 Before getting started, ensure the following tools are installed on your system:
@@ -22,30 +14,6 @@ Before getting started, ensure the following tools are installed on your system:
 - ![Node.js](https://img.icons8.com/color/48/000000/nodejs.png) [**Node.js**](https://nodejs.org/en)
 - ![Android Studio](https://img.icons8.com/color/48/000000/android-studio--v2.png) [**Android Studio**](https://developer.android.com/studio)
 - ![Python](https://img.icons8.com/color/48/000000/python--v1.png) [**Python**](https://www.python.org/downloads/)
-
----
-
-## 📥 Installation
-
-You can get the project files in two ways:
-
-### 📌 Option 1: Clone via Git
-
-```bash
-# Clone the repository using Git
-git clone https://github.com/zseng0912/nutri-recommendation.git
-
-# Navigate into the project folder
-cd your-repo-name
-```
-
-### 📌 Option 2: Download ZIP
-
-1. 🔗 Visit the repository on [GitHub](https://github.com/zseng0912/nutri-recommendation.git)
-2. ⬇️ Click on the green **"Code"** button
-3. Select **"Download ZIP"**
-4. 🗂️ Extract the ZIP file to your desired location
-5. 📂 Open the extracted folder in your preferred code editor
 
 ---
 
